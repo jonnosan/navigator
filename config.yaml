@@ -1,0 +1,82 @@
+# NAVIGATOR config — single source of truth, loaded by settings.py
+# Philosophy reminder:
+#   - codec/generator are FROZEN; only the Reader (and optional corpus-code model) train.
+#   - The code is durable machinery, never carries musical value on its own.
+#   - Value is constituted at reading. Returned songs are Reader-carved slices.
+#   - Start blank: no seed corpus required. Cold start is forced-choice active learning.
+
+paths:
+  data_dir: ./data                  # gitignored root
+  audio_dir: ./data/audio           # content-addressed (sha256-prefix sharded) wavs
+  code_cache_dir: ./data/codes      # token/latent tensors (npz/safetensors)
+  db_path: ./data/navigator.sqlite  # SQLite metadata + reading events
+
+device:
+  preference: auto                  # auto | mps | cuda | cpu
+
+# The invertible map (D's heart). FROZEN. encode/decode must round-trip.
+codec:
+  name: dac                         # dac | encodec
+  model: descript/dac_44khz         # or facebook/encodec_32khz
+  sample_rate: 44100
+  # round-trip tolerance for test_codec.py (spectral correlation threshold)
+  roundtrip_corr_min: 0.95
+
+# Reader features (C's input). Prefer reusing the codec's latents.
+features:
+  source: codec_latents             # codec_latents | mert | clap
+  fallback_model: null              # populated if source != codec_latents
+
+# Optional frozen generator (D's M6). System must work with this disabled.
+generator:
+  enabled: false
+  model: facebook/musicgen-small
+
+# The trainable Reader (C). value head + boundary head over frozen features.
+reader:
+  value_head:
+    hidden_dims: [128, 64]
+    dropout: 0.1
+  boundary_head:
+    hidden_dims: [128]
+    type: pointer                   # pointer | crf
+  training:
+    batch_size: 16
+    max_epochs: 50
+    lr: 1.0e-3
+    weight_decay: 1.0e-4
+    early_stop_patience: 5
+  # Cold -> warm gate. Reader is "warm" once held-out pairwise accuracy crosses this.
+  confidence_gate:
+    held_out_pairwise_accuracy: 0.65
+    min_pairs_required: 30
+
+# Active-learning cold start (M3 / bootstrap.py).
+bootstrap:
+  target_pairs: 40                  # number of forced A/B choices to collect before gate check
+  diversity_count: 200              # how many diverse seed codes to sample from
+  pair_selection: diverse           # diverse | random
+
+# Code-space navigation (M2 / navigate.py).
+navigate:
+  default_strength: 0.30            # 0 = identity decode; 1 = far
+  default_count: 4                  # songs returned per request
+  candidate_multiplier: 8           # generate count*multiplier, Reader ranks down to count
+  reader_gradient:
+    enabled: true
+    step_size: 0.15                 # how aggressively to move toward preferred-code region
+    neighbors_k: 16                 # nearest preferred/dispreferred codes used per step
+
+# Optional tiny corpus-code model (D's M5). Few MB. Sample()/score() in code space.
+corpus_model:
+  enabled: false
+  kind: gmm                         # gmm | vae | ar
+  components: 32                    # GMM only
+
+# Interactive surface. No auth here — assume reverse proxy handles it.
+api:
+  host: 127.0.0.1
+  port: 8765
+  reverse_proxy_note: |
+    NAVIGATOR binds localhost only. Production deployments (if any) must front it
+    with a reverse proxy that handles authentication.
