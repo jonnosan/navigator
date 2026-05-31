@@ -58,21 +58,21 @@ architecture (context, containers, components, key flows).
            └───────────────────────────────────────────────────────────┘
 ```
 
-## Status — M0 (skeleton)
+## Status
 
 Done:
-- Layout per spec (`src/navigator/`, `tests/`, `web/`, `scripts/`, `data/`).
-- `pyproject.toml` (uv-managed), `config.yaml`, `settings.py`.
-- `schemas.py`: `Clip`, `Code`, `PerturbOp`, `Lineage`, `Segment`, `ReadingEvent`,
-  `PreferencePair`, `GenerationRequest`, `GenerationResult`, `ScoredSegment`.
-- Module stubs for codec / navigate / reader / generator / corpus_model /
-  bootstrap / loop / store / api (each raises `NotImplementedError` until its
-  milestone).
-- `tests/test_schemas.py` + `tests/test_settings.py` pass; per-milestone test
-  files exist but are `pytest.skip`-marked.
+- **M0** — layout, config, schemas, stubs, M0 tests pass.
+- **M1** — frozen codec adapter (encode/decode/latents), SQLite + content-addressed
+  storage, `encode_audio.py` CLI. Round-trip ≥ `roundtrip_corr_min` enforced by
+  `test_codec.py`.
 
-Not yet (per-milestone):
-- M1 codec round-trip + store
+Backends:
+- **encodec** (default) — EnCodec via `transformers`. Light dep tree.
+  Checkpoint `facebook/encodec_32khz` (MusicGen-companion, music-trained).
+- **dac** (optional, heavier dep tree) — Descript Audio Codec at 44.1 kHz.
+  Install with `uv sync --extra dac` and set `codec.name: dac` in `config.yaml`.
+
+Not yet (per-milestone, see [GitHub issues](https://github.com/jonnosan/navigator/issues)):
 - M2 code-space navigation
 - M3 active-learning cold start
 - M4 Reader value head + cold→warm gate
@@ -86,9 +86,12 @@ Not yet (per-milestone):
 
 ```bash
 cd /Users/jonno/src/navigator
-uv sync --extra dev          # install pydantic, pyyaml, pytest, ruff
-uv run pytest                # M0 acceptance: tests pass
-uv run python -c "from navigator import schemas; print(schemas.__name__)"
+uv sync --extra dev                          # default backend (encodec)
+# or:
+uv sync --extra dev --extra dac              # if you want DAC available too
+
+uv run pytest                                # acceptance tests
+uv run python scripts/encode_audio.py <wav>  # audio -> Code (cached, stored)
 ```
 
 ## Philosophical stance, in a paragraph

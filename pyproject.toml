@@ -2,14 +2,21 @@
 name = "navigator"
 version = "0.0.1"
 description = "NAVIGATOR — a Reader that navigates an invertible code space"
-requires-python = ">=3.11"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "pyyaml>=6.0",
+    # M1 — invertible map + features + store
+    "torch>=2.4",
+    "transformers>=4.40",      # EnCodec adapter (HF). DAC works too but pulls a
+    "soundfile>=0.12",         # heavier transitive tree; see codec.py for both.
+    "numpy>=1.26",
+    "scipy>=1.13",
 ]
 
 [project.optional-dependencies]
+dac = ["descript-audio-codec>=1.0"]
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",
@@ -29,7 +36,7 @@ pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]

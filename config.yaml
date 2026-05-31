@@ -16,11 +16,11 @@ device:
 
 # The invertible map (D's heart). FROZEN. encode/decode must round-trip.
 codec:
-  name: dac                         # dac | encodec
-  model: descript/dac_44khz         # or facebook/encodec_32khz
-  sample_rate: 44100
-  # round-trip tolerance for test_codec.py (spectral correlation threshold)
-  roundtrip_corr_min: 0.95
+  name: encodec                     # encodec (default, light deps) | dac (extra: --extra dac)
+  model: facebook/encodec_32khz     # MusicGen-companion, music-trained
+  sample_rate: 32000                # must match the checkpoint's native rate
+  # round-trip tolerance for test_codec.py (log-spectral correlation threshold)
+  roundtrip_corr_min: 0.90          # EnCodec is more compressive than DAC; raise to 0.95 for DAC
 
 # Reader features (C's input). Prefer reusing the codec's latents.
 features:
